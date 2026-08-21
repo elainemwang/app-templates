@@ -1,0 +1,13 @@
+version: 1
+name: "Agent - OpenAI Basic"
+description: "A lean OpenAI Agents SDK agent backend that runs locally with no database. Exposes the Responses API; optionally adds Lakebase-backed durable sessions + long-running background execution when configured."
+
+resource_specs:
+  - name: "experiment"
+    description: "Optional. The destination experiment for MLflow traces from the agent's execution."
+    experiment_spec:
+      permission: "CAN_EDIT"
+  - name: "postgres"
+    description: "Optional. A Lakebase Autoscaling database for durable session memory and long-running task persistence. Omit to run with the local SQLite session store."
+    postgres_spec:
+      permission: "CAN_CONNECT_AND_CREATE"
