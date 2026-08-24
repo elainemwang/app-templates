@@ -124,7 +124,8 @@ independent — enable either, both, or neither.
 
 ### Enable MLflow tracing (optional)
 
-Tracing is gated on `MLFLOW_EXPERIMENT_ID`; the app code needs no change. When enabled, also set
+Tracing is gated on **both** `MLFLOW_EXPERIMENT_ID` and `MLFLOW_TRACKING_URI` — set both to enable
+it, leave either unset to keep it off. The app code needs no change. Use
 `MLFLOW_TRACKING_URI="databricks"` so traces land in your workspace.
 
 - **Local:** set `MLFLOW_EXPERIMENT_ID=<id>` and `MLFLOW_TRACKING_URI="databricks"` in `.env` (an
@@ -132,13 +133,11 @@ Tracing is gated on `MLFLOW_EXPERIMENT_ID`; the app code needs no change. When e
 - **Deployed:** set `MLFLOW_TRACKING_URI` + `MLFLOW_EXPERIMENT_ID` as env in `app.yaml`, and attach
   an `experiment` resource to the app.
 
-When the experiment is set, the agent enables MLflow autolog and tags each trace with the session
-id. When unset it disables tracing outright, so the agent-server framework's per-request span is
-never created and no traces are exported. Nothing else in the app code changes.
+When both are set, the agent enables MLflow autolog and tags each trace with the session id.
+Otherwise it disables tracing outright, so the agent-server framework's per-request span is never
+created and no traces are exported. Nothing else in the app code changes.
 
 ### Enable durable sessions + background mode (optional)
-
-There are two independent durable stores, each gated by its own env var:
 
 Two independent durable stores, each set via `app.yaml` env:
 
