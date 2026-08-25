@@ -1,16 +1,22 @@
-"""FastAPI serving of the agent over HTTP — the plumbing behind the agent's HTTP surface.
+"""The agent's HTTP surface — a from-scratch FastAPI app, framework-free and SDK-agnostic.
 
-Hand-builds the endpoints so the template shows exactly how a Databricks agent is served. You edit
-the agent in ``agent/agent.py``; you rarely touch this file. The request/response bodies are plain
-Responses-shaped dicts (``input`` list + optional ``session_id``) — the OpenAI Agents SDK validates
-the input itself, so there are no wrapper types here. It provides:
+``build_app`` wires the endpoints to two handlers with a generic contract:
+
+    invoke_handler(request: dict) -> dict
+    stream_handler(request: dict) -> AsyncGenerator[dict]
+
+Nothing here is OpenAI- or LangGraph-specific — the agent SDK lives entirely behind those handlers
+(see ``agent/agent.py``). So this file is identical across agent templates; only the handlers differ.
+Request/response bodies are plain Responses-shaped dicts (``input`` list + optional ``session_id``).
+Endpoints:
 
 - ``POST /invocations`` and ``POST /responses`` — run a turn. ``stream: true`` returns an SSE stream
   (``data: {...}`` frames ending with ``data: [DONE]``); ``background: true`` returns a ``resp_...``
   id immediately and runs the turn in the background.
 - ``GET /responses/{id}`` — poll a background run's status/result.
 - ``GET /health`` — liveness.
-- An MLflow span around every request (inputs/outputs set), so tracing works when configured.
+
+Every request is wrapped in an MLflow span, so tracing works when configured.
 
 **Background mode here is in-memory and single-process** — a teaching stand-in, not durable. Runs
 live in a dict in this process: they do NOT survive a restart and are NOT shared across replicas.

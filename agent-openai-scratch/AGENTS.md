@@ -25,24 +25,23 @@ No database needed — sessions use a local SQLite file by default.
 | Add an MCP server | append one to `build_mcp_servers()` in `agent/mcps.py` (e.g. `McpServer.from_uc_function(...)` from `databricks_openai.agents`) |
 | Change how a request maps to a run | `agent/agent.py` (`invoke_handler` / `stream_handler`) |
 | Change the session store | `agent/mason/session_store.py` |
-| Change the HTTP surface (routes, SSE, background) | `agent/mason/wire/serve.py` |
+| Change the HTTP surface (routes, SSE, background) | `server/app.py` |
 | Server entry point | `server/start_server.py` (rarely needed) |
 | Add a test | `tests/` (hermetic; gate model calls on a workspace profile — see `test_agent.py`) |
 
-`agent/mason/` holds plumbing (session store, tracing, MCP connection lifecycle, wire translation,
-the FastAPI serving layer) slated to move into Databricks SDKs — grouped so that migration is
-localized. You rarely edit it; build the agent in `agent/agent.py`, `agent/tools/`, and
-`agent/mcps.py`.
+`agent/mason/` holds plumbing (session store, tracing, MCP connection lifecycle, wire translation)
+slated to move into Databricks SDKs — grouped so that migration is localized. You rarely edit it;
+build the agent in `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`.
 
 ## How the server works
 
 `server/start_server.py` calls `agent.agent.configure()`, then `build_app(invoke_handler,
-stream_handler)` from `agent/mason/wire/serve.py`, and runs uvicorn. `serve.py` is a plain FastAPI
-app — no serving framework — that provides `POST /invocations` + `/responses` (sync, `stream: true`
-SSE, and `background: true`), `GET /responses/{id}`, and `/health`, wrapping each request in an
-MLflow span.
+stream_handler)` from `server/app.py`, and runs uvicorn. `server/app.py` is a plain FastAPI app —
+no serving framework, and SDK-agnostic (it only knows the `invoke_handler`/`stream_handler` dict
+contract) — that provides `POST /invocations` + `/responses` (sync, `stream: true` SSE, and
+`background: true`), `GET /responses/{id}`, and `/health`, wrapping each request in an MLflow span.
 
-**Background mode is in-memory and single-process** (a dict in `serve.py`): non-durable, lost on
+**Background mode is in-memory and single-process** (a dict in `server/app.py`): non-durable, lost on
 restart, not shared across replicas. It demonstrates the submit→poll pattern; it is not production
 durability.
 
@@ -78,7 +77,7 @@ tracing section.
 ## Notes for maintainers
 
 - `agent/mason/wire/` is OpenAI-Agents-SDK-specific: `inbound`/`outbound` translate the Responses
-  wire format to/from the SDK; `serve.py` is the FastAPI app hosting it.
+  wire format to/from the SDK. `server/app.py` is SDK-agnostic — it hosts any agent exposing the
+  `invoke_handler`/`stream_handler` dict contract (so another SDK's template can reuse it verbatim).
 - `mcp<2` is pinned in `pyproject.toml` because `databricks-openai` imports a symbol removed in
   `mcp` 2.0; remove the pin when `databricks-openai` supports `mcp>=2`.
-```

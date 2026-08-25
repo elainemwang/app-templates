@@ -1,8 +1,7 @@
-"""Agent server entry point — a raw FastAPI app, no serving framework.
+"""Agent server entry point.
 
-The Responses API surface (routes, SSE framing, tracing spans, in-memory background mode) is built
-by ``agent/mason/wire/serve.py``; this file just loads config, wires the agent handlers in, and runs
-uvicorn.
+Loads config, wires the agent's handlers into the (SDK-agnostic) FastAPI app from ``server/app.py``,
+and runs uvicorn. The handlers live in ``agent/agent.py`` — the only SDK-specific piece.
 """
 
 import os
@@ -13,11 +12,10 @@ from dotenv import load_dotenv
 
 # Importing the agent is side-effect-free (no env is read until configure()), so it sits up top.
 import agent.agent
-from agent.mason.wire.serve import build_app
+from server.app import build_app
 
-# Load .env before the runtime steps below read env (agent client auth + tracing config).
+# Load .env before configure() reads env (agent client auth + tracing config), then wire the agent.
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
-
 agent.agent.configure()
 
 # Module-level app so uvicorn can import it by string (and to enable multiple workers).

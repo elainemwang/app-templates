@@ -7,8 +7,8 @@ wire shape (the [Responses](https://platform.openai.com/docs/api-reference/respo
 items): `POST /responses`, `POST /invocations`, streaming via SSE, and an in-memory `background` mode
 with `GET /responses/{id}`.
 
-The HTTP surface is hand-written in `agent/mason/wire/serve.py` (routes, SSE framing, tracing spans,
-the in-memory background store), so the template shows exactly how the agent is served — request and
+The HTTP surface is hand-written in `server/app.py` (routes, SSE framing, tracing spans, the
+in-memory background store), so the template shows exactly how the agent is served — request and
 response bodies are plain dicts, no wrapper types.
 
 This template is API-first (no bundled UI). Call it with the OpenAI SDK, `curl`, or from your own
@@ -27,23 +27,25 @@ agent/                 # the agent (reasoning plane) — this is what you edit
     memory.py          #     remember / recall — memory_tools() returns them when AGENT_MEMORY_STORE is set
     tracing.py         #     MLflow tracing setup (on only when a destination + an experiment are set)
     mcp_runtime.py     #     connects the servers from mcps.build_mcp_servers() for each request
-    wire/              #     Responses <-> agent-SDK translation + serving
+    wire/              #     Responses <-> agent-SDK translation
       inbound.py       #       request -> run input (session id, input dedup)
       outbound.py      #       SDK stream events -> Responses wire events (surfaces tool outputs)
-      serve.py         #       the FastAPI app: routes, SSE framing, tracing spans, in-memory background
-server/
+server/                # the HTTP surface — SDK-agnostic; rarely edited
+  app.py               #   build_app(): FastAPI routes, SSE framing, tracing spans, in-memory background
   start_server.py      #   entry point: loads config, builds the app, runs uvicorn
 tests/
   test_agent.py        #   hermetic smoke tests + one gated live model call
 ```
 
 You edit `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`; everything in `agent/mason/` is
-plumbing (session store, tracing, MCP connection lifecycle, wire translation, the FastAPI serving
-layer) that's slated to move into Databricks SDKs, grouped so that migration is a localized change.
-`tools/` is a drop-in package: add a `*.py` with a `@function_tool` function and it's auto-collected
-(no edits to existing code). `mcps.py` exposes `build_mcp_servers()` (empty by default — add servers
-to offer them). `mason/session_store.py` defaults to local SQLite and switches to a Databricks
-managed session store when `AGENT_SESSION_STORE` is set.
+plumbing (session store, tracing, MCP connection lifecycle, wire translation) that's slated to move
+into Databricks SDKs, grouped so that migration is a localized change. `server/app.py` is the
+SDK-agnostic HTTP surface — it wires two generic handlers (`invoke_handler`/`stream_handler`) to the
+endpoints, so the agent SDK lives entirely behind them in `agent/agent.py`. `tools/` is a drop-in
+package: add a `*.py` with a `@function_tool` function and it's auto-collected (no edits to existing
+code). `mcps.py` exposes `build_mcp_servers()` (empty by default — add servers to offer them).
+`mason/session_store.py` defaults to local SQLite and switches to a Databricks managed session store
+when `AGENT_SESSION_STORE` is set.
 
 ## Run locally
 
@@ -126,7 +128,7 @@ curl -X POST <base_url>/responses -H "Content-Type: application/json" \
 - **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `create_agent()`
   then includes the `remember`/`recall` tools from `agent/mason/memory.py` (persist/search facts across
   conversations). Unset → the model isn't offered them.
-- **Change the HTTP surface:** `agent/mason/wire/serve.py` — routes, SSE framing, background store.
+- **Change the HTTP surface:** `server/app.py` — routes, SSE framing, background store.
 
 ## Test
 
@@ -166,8 +168,8 @@ Set neither half → tracing stays off. Examples:
   binding injects `MLFLOW_EXPERIMENT_ID`).
 
 When both halves are present the agent enables MLflow autolog and tags each trace with the session
-id. Otherwise it disables tracing outright, so the per-request span `serve.py` opens has nothing to
-export and no traces are created.
+id. Otherwise it disables tracing outright, so the per-request span `server/app.py` opens has nothing
+to export and no traces are created.
 
 ### Enable durable conversation history (optional)
 
@@ -192,9 +194,10 @@ restarts) instead of local SQLite. Unset → local SQLite.
 ## Notes
 
 - **`agent/mason/wire/` is OpenAI-Agents-SDK-specific** — `inbound`/`outbound` translate the
-  Responses wire format to/from the SDK; `serve.py` is the FastAPI app that hosts it.
-- **Background mode is in-memory** (`serve.py`) — non-durable, single-process; see the note under
-  the client contract.
+  Responses wire format to/from the SDK. **`server/app.py` is SDK-agnostic** — it hosts any agent
+  exposing the `invoke_handler`/`stream_handler` dict contract.
+- **Background mode is in-memory** (`server/app.py`) — non-durable, single-process; see the note
+  under the client contract.
 - **`mcp<2` pin** (`pyproject.toml`): `databricks-openai` currently imports a symbol removed in
   `mcp` 2.0. Remove the pin once `databricks-openai` supports `mcp>=2`.
 ```
