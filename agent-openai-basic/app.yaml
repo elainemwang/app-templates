@@ -5,7 +5,8 @@ command: ["uv", "run", "start-server"]
 # durability, add the matching entries below (literal values):
 #
 # env:
-#   # Tracing (set both): the destination + the experiment to log to.
+#   # Tracing (set a destination + an experiment). Destination: MLFLOW_TRACKING_URI or
+#   # MLFLOW_TRACING_DESTINATION. Experiment: MLFLOW_EXPERIMENT_ID or MLFLOW_EXPERIMENT_NAME.
 #   - name: MLFLOW_TRACKING_URI
 #     value: "databricks"
 #   - name: MLFLOW_EXPERIMENT_ID

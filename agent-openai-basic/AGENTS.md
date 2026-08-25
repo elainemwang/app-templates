@@ -50,8 +50,10 @@ add a file to `agent/tools/`.
 
 ## MLflow tracing
 
-Optional. Set `MLFLOW_EXPERIMENT_ID` to a valid experiment to enable tracing; leave it unset to
-skip (the server logs that it skipped and boots normally).
+Optional. Enabled when MLflow has both a destination (`MLFLOW_TRACKING_URI` or
+`MLFLOW_TRACING_DESTINATION`) and an experiment (`MLFLOW_EXPERIMENT_ID` or `MLFLOW_EXPERIMENT_NAME`);
+`mason/tracing.py` gates on any valid combo. Leave either half unset to skip. See the README's
+tracing section.
 
 ## Quick commands
 
