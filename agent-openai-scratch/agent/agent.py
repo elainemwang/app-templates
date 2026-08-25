@@ -9,7 +9,7 @@ from agent.mason import mcp_runtime, tracing
 # memory_tools: swap for a databricks-openai helper when it ships.
 from agent.mason.memory import memory_tools
 from agent.mason.session_store import create_session
-from agent.mason.wire.inbound import deduplicate_input, get_session_id
+from agent.mason.wire.inbound import get_session_id
 from agent.mason.wire.outbound import process_agent_stream_events
 
 # Importing the tools package auto-registers every tool module.
@@ -45,8 +45,7 @@ async def invoke_handler(request: dict) -> dict:
 
     async with AsyncExitStack() as stack:
         agent = create_agent(mcp_servers=await mcp_runtime.connect(stack))
-        messages = await deduplicate_input(request, session)
-        result = await Runner.run(agent, messages, session=session)
+        result = await Runner.run(agent, request.get("input") or [], session=session)
     return {
         "output": [item.to_input_item() for item in result.new_items],
         "session_id": session.session_id,
@@ -61,8 +60,7 @@ async def stream_handler(request: dict) -> AsyncGenerator[dict, None]:
 
     async with AsyncExitStack() as stack:
         agent = create_agent(mcp_servers=await mcp_runtime.connect(stack))
-        messages = await deduplicate_input(request, session)
-        result = Runner.run_streamed(agent, input=messages, session=session)
+        result = Runner.run_streamed(agent, input=request.get("input") or [], session=session)
 
         async for event in process_agent_stream_events(result.stream_events()):
             yield event
