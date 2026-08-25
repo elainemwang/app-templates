@@ -3,10 +3,9 @@
 Extracts the session id and turns ``request.input`` into the message list handed to
 ``Runner.run`` (deduped against session history, content normalized)."""
 
+from agents.memory.session import SessionABC
 from mlflow.types.responses import ResponsesAgentRequest
 from uuid_utils import uuid7
-
-from agents.memory.session import SessionABC
 
 
 def get_session_id(request: ResponsesAgentRequest) -> str:
@@ -18,7 +17,7 @@ def get_session_id(request: ResponsesAgentRequest) -> str:
     # 3. Generate a new UUID
     ci = dict(request.custom_inputs or {})
 
-    if "session_id" in ci and ci["session_id"]:
+    if ci.get("session_id"):
         return str(ci["session_id"])
 
     if request.context and getattr(request.context, "conversation_id", None):

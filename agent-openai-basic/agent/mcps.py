@@ -1,15 +1,10 @@
-"""MCP servers for the agent.
+"""MCP servers to offer the agent — this is where you configure them.
 
-Empty by default — the agent runs with no MCP servers. To add one, append an ``MCPServer`` (from the
-OpenAI Agents SDK — e.g. ``MCPServerStreamableHttp``/``MCPServerSse``) to the list in
-``build_mcp_servers``. ``connect`` opens them for the duration of a request via the SDK's
-``MCPServerManager`` (connects on enter, cleans up on exit, drops any that fail), and the agent
-calls their tools over those live connections until the run finishes.
+Empty by default: the agent runs with no MCP servers. Add servers to ``build_mcp_servers`` to offer
+them; ``agent/mason/mcp_runtime.py`` handles connecting them for each request.
 """
 
-from contextlib import AsyncExitStack
-
-from agents.mcp import MCPServer, MCPServerManager
+from agents.mcp import MCPServer
 
 
 def build_mcp_servers() -> list[MCPServer]:
@@ -26,16 +21,3 @@ def build_mcp_servers() -> list[MCPServer]:
         ]
     """
     return []
-
-
-async def connect(stack: AsyncExitStack) -> list[MCPServer]:
-    """Open the configured MCP servers for this request; returns the connected ones.
-
-    No servers configured -> empty list. The ``MCPServerManager`` connects them on enter and cleans
-    them up when ``stack`` exits at the end of the request.
-    """
-    servers = build_mcp_servers()
-    if not servers:
-        return []
-    manager = await stack.enter_async_context(MCPServerManager(servers))
-    return manager.active_servers

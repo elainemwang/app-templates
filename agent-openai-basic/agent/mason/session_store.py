@@ -10,7 +10,6 @@ The managed store is provisioned/inspected out of band (e.g. the ``databricks ag
 ``agents/v1`` API). This module only reads/writes conversation items for a given session id.
 """
 
-import json
 import os
 
 from agents.memory.session import SessionABC

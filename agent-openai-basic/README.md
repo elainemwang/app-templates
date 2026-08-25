@@ -22,6 +22,7 @@ agent/                 # the agent (reasoning plane) — this is what you edit
     session_store.py   #     session store: local SQLite by default; managed store when AGENT_SESSION_STORE is set
     memory.py          #     remember / recall — memory_tools() returns them when AGENT_MEMORY_STORE is set
     tracing.py         #     MLflow tracing setup (on only when both MLFLOW_* vars are set)
+    mcp_runtime.py     #     connects the servers from mcps.build_mcp_servers() for each request
     wire/              #     Responses <-> agent-SDK translation
       inbound.py       #       request -> run input (session id, input dedup)
       outbound.py      #       SDK stream events -> Responses wire events (surfaces tool outputs)
@@ -31,11 +32,12 @@ tests/
   test_agent.py        #   hermetic smoke tests + one gated live model call
 ```
 
-You edit `agent/agent.py` and `agent/tools/`; everything in `agent/mason/` is plumbing (session
-store, tracing, wire translation) that's slated to move into Databricks SDKs, grouped so that
-migration is a localized change. `tools/` is a drop-in package: add a `*.py` with a `@function_tool`
-function and it's auto-collected (no edits to existing code). `mcps.py` exposes `build_mcp_servers()`
-(empty by default — add servers to offer them). `mason/session_store.py` defaults to local SQLite and
+You edit `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`; everything in `agent/mason/` is
+plumbing (session store, tracing, MCP connection lifecycle, wire translation) that's slated to move
+into Databricks SDKs, grouped so that migration is a localized change. `tools/` is a drop-in package:
+add a `*.py` with a `@function_tool` function and it's auto-collected (no edits to existing code).
+`mcps.py` exposes `build_mcp_servers()` (empty by default — add servers to offer them).
+`mason/session_store.py` defaults to local SQLite and
 switches to a Databricks managed session store when `AGENT_SESSION_STORE` is set.
 
 ## Run locally

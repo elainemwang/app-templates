@@ -10,8 +10,7 @@ from mlflow.types.responses import (
     ResponsesAgentStreamEvent,
 )
 
-from agent import mcps
-from agent.mason import tracing
+from agent.mason import mcp_runtime, tracing
 
 # memory_tools: swap for a databricks-openai helper when it ships.
 from agent.mason.memory import memory_tools
@@ -47,7 +46,7 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
     session = create_session(session_id)
 
     async with AsyncExitStack() as stack:
-        agent = create_agent(mcp_servers=await mcps.connect(stack))
+        agent = create_agent(mcp_servers=await mcp_runtime.connect(stack))
         messages = await deduplicate_input(request, session)
         result = await Runner.run(agent, messages, session=session)
     return ResponsesAgentResponse(
@@ -65,7 +64,7 @@ async def stream_handler(
     session = create_session(session_id)
 
     async with AsyncExitStack() as stack:
-        agent = create_agent(mcp_servers=await mcps.connect(stack))
+        agent = create_agent(mcp_servers=await mcp_runtime.connect(stack))
         messages = await deduplicate_input(request, session)
         result = Runner.run_streamed(agent, input=messages, session=session)
 

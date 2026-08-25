@@ -6,7 +6,7 @@ return value of a function tool) — those arrive as ``run_item_stream_event`` /
 — so we surface them as an explicit ``response.output_item.done``.
 """
 
-from typing import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 
 from agents.result import StreamEvent
 from mlflow.types.responses import ResponsesAgentStreamEvent

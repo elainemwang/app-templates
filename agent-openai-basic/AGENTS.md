@@ -27,9 +27,9 @@ No database needed — sessions use a local SQLite file by default.
 | Server / durability wiring | `server/start_server.py` (rarely needed) |
 | Add a test | `tests/` (hermetic; gate model calls on a workspace profile — see `test_agent.py`) |
 
-`agent/mason/` holds plumbing (session store, tracing, wire translation) slated to move into
-Databricks SDKs — grouped so that migration is localized. You rarely edit it; build the agent in
-`agent/agent.py` and `agent/tools/`.
+`agent/mason/` holds plumbing (session store, tracing, MCP connection lifecycle, wire translation)
+slated to move into Databricks SDKs — grouped so that migration is localized. You rarely edit it;
+build the agent in `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`.
 
 ## How tools register
 
