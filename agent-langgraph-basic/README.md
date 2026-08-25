@@ -131,16 +131,23 @@ independent — enable either, both, or neither.
 
 ### Enable MLflow tracing (optional)
 
-Tracing is gated on **both** `MLFLOW_EXPERIMENT_ID` and `MLFLOW_TRACKING_URI` — set both to enable
-it, leave either unset to keep it off. The app code needs no change. Use
-`MLFLOW_TRACKING_URI="databricks"` so traces land in your workspace.
+Tracing turns on when MLflow has **both a destination and an experiment** — set one of each, in
+whichever form you have. The app code needs no change; MLflow resolves the specific value.
 
-- **Local:** set `MLFLOW_EXPERIMENT_ID=<id>` and `MLFLOW_TRACKING_URI="databricks"` in `.env`.
-- **Deployed:** set both as env in `app.yaml`, and attach an `experiment` resource to the app.
+- **Destination:** `MLFLOW_TRACKING_URI` (e.g. `"databricks"`) or `MLFLOW_TRACING_DESTINATION`
+  (an experiment id or a `catalog.schema`).
+- **Experiment:** `MLFLOW_EXPERIMENT_ID` or `MLFLOW_EXPERIMENT_NAME`.
 
-When both are set, the agent enables MLflow autolog (`mlflow.langchain.autolog()`) and tags each
-trace with the session id. Otherwise it disables tracing outright, so the agent-server framework's
-per-request span is never created and no traces are exported.
+Set neither half → tracing stays off. Examples:
+
+- **Local:** `MLFLOW_TRACKING_URI="databricks"` + `MLFLOW_EXPERIMENT_ID=<id>` (or `..._NAME=<name>`)
+  in `.env`, pointing at an experiment in the workspace your profile targets.
+- **Deployed:** set the same env in `app.yaml` and attach an `experiment` resource (its `valueFrom`
+  binding injects `MLFLOW_EXPERIMENT_ID`).
+
+When both halves are present the agent enables MLflow autolog (`mlflow.langchain.autolog()`) and tags
+each trace with the session id. Otherwise it disables tracing outright, so the agent-server
+framework's per-request span is never created and no traces are exported.
 
 ### Enable durable background mode (optional)
 
@@ -164,8 +171,10 @@ running process but does not survive restarts or span replicas. For durable, sha
 | `DATABRICKS_CONFIG_PROFILE` | `DEFAULT` | Auth profile used to call the model (local dev) |
 | `AGENT_MEMORY_STORE` | _unset_ | Managed memory store name → registers `remember`/`recall` long-term-memory tools |
 | `LAKEBASE_AUTOSCALING_ENDPOINT` | _unset_ | Lakebase endpoint → durable background mode + crash recovery (else in-request) |
-| `MLFLOW_EXPERIMENT_ID` | _unset_ | Experiment to trace to. Set with `MLFLOW_TRACKING_URI` to enable tracing |
-| `MLFLOW_TRACKING_URI` | _unset_ | Trace destination (`databricks`). Set with `MLFLOW_EXPERIMENT_ID` to enable tracing |
+| `MLFLOW_TRACKING_URI` | _unset_ | Trace destination (e.g. `databricks`). A destination + an experiment enables tracing |
+| `MLFLOW_TRACING_DESTINATION` | _unset_ | Alt destination — experiment id or `catalog.schema` (either destination var works) |
+| `MLFLOW_EXPERIMENT_ID` | _unset_ | Experiment to trace to (by id) |
+| `MLFLOW_EXPERIMENT_NAME` | _unset_ | Experiment to trace to (by name; alternative to the id) |
 
 ## Notes
 
