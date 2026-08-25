@@ -1,43 +1,28 @@
-"""Inbound wire translation: Responses request -> agent-SDK run input.
+"""Inbound request handling: pull the session id and prepare the OpenAI Agents SDK run input.
 
-Extracts the session id and turns ``request.input`` into the message list handed to
-``Runner.run`` (deduped against session history, content normalized)."""
+The request body is a plain dict shaped like the OpenAI Responses API — ``input`` is a list of
+``openai.types.responses`` input items (what ``Runner.run`` accepts), plus an optional top-level
+``session_id`` for multi-turn. No wrapper types: the SDK validates the input itself.
+"""
 
 from agents.memory.session import SessionABC
-from mlflow.types.responses import ResponsesAgentRequest
 from uuid_utils import uuid7
 
 
-def get_session_id(request: ResponsesAgentRequest) -> str:
-    """Extract session_id from request or generate a new one."""
-    # Priority:
-    # 1. Use session_id from custom_inputs
-    # 2. Use conversation_id from ChatContext
-    #    https://mlflow.org/docs/latest/api_reference/python_api/mlflow.types.html#mlflow.types.agent.ChatContext
-    # 3. Generate a new UUID
-    ci = dict(request.custom_inputs or {})
-
-    if ci.get("session_id"):
-        return str(ci["session_id"])
-
-    if request.context and getattr(request.context, "conversation_id", None):
-        return str(request.context.conversation_id)
-
-    return str(uuid7())
+def get_session_id(request: dict) -> str:
+    """Return the request's ``session_id`` (for multi-turn), or a fresh UUID for a new conversation."""
+    return str(request.get("session_id") or uuid7())
 
 
-async def deduplicate_input(request: ResponsesAgentRequest, session: SessionABC) -> list[dict]:
+async def deduplicate_input(request: dict, session: SessionABC) -> list[dict]:
     """Return the input messages to pass to the Runner, avoiding duplication with session history.
 
-    When a client sends the full conversation history AND the session already has
-    that history persisted, passing everything through would duplicate messages.
-    If the session already covers the prior turns, only the latest message is needed
-    since the session will prepend the full history automatically.
+    When a client sends the full conversation history AND the session already has that history
+    persisted, passing everything through would duplicate messages. If the session already covers
+    the prior turns, only the latest message is needed — the session prepends the rest automatically.
     """
-    messages = [i.model_dump() for i in request.input]
-    # Normalize assistant message content from string to structured list format.
-    # MLflow evaluation sends assistant content as a plain string, but the OpenAI
-    # Agents SDK expects it as [{"type": "output_text", "text": ..., "annotations": []}].
+    messages = list(request.get("input") or [])
+    # Normalize assistant message content from string to the structured list the SDK expects.
     for msg in messages:
         if (
             isinstance(msg, dict)

@@ -2,13 +2,14 @@
 
 An [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) agent **backend** for
 Databricks Apps, served from a **from-scratch FastAPI app** — no serving framework. It runs locally
-with **no database and no setup** — just an auth profile — and exposes the
-[OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses)
-(`POST /responses`, `POST /invocations`, streaming via SSE, and an in-memory `background` mode with
-`GET /responses/{id}`).
+with **no database and no setup** — just an auth profile — and speaks the OpenAI Agents SDK's native
+wire shape (the [Responses](https://platform.openai.com/docs/api-reference/responses) input/output
+items): `POST /responses`, `POST /invocations`, streaming via SSE, and an in-memory `background` mode
+with `GET /responses/{id}`.
 
 The HTTP surface is hand-written in `agent/mason/wire/serve.py` (routes, SSE framing, tracing spans,
-the in-memory background store), so the template shows exactly how a Responses agent is served.
+the in-memory background store), so the template shows exactly how the agent is served — request and
+response bodies are plain dicts, no wrapper types.
 
 This template is API-first (no bundled UI). Call it with the OpenAI SDK, `curl`, or from your own
 frontend / model-serving client.
@@ -67,9 +68,12 @@ storage, tracing — is off by default and requires no setup.
 
 ## Client contract
 
-`POST /responses` (and its alias `POST /invocations`) implement the OpenAI Responses API. Replace
-`<base_url>` with `http://localhost:8000` locally, or `https://<app>.databricksapps.com` (with an
-`Authorization: Bearer <token>` header) when deployed.
+`POST /responses` (and its alias `POST /invocations`) take a JSON body with an `input` list — the
+same items the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) and
+the OpenAI Agents SDK use — plus an optional top-level `session_id` for multi-turn. The reply is
+`{ "output": [...], "session_id": "..." }`. Replace `<base_url>` with `http://localhost:8000`
+locally, or `https://<app>.databricksapps.com` (with an `Authorization: Bearer <token>` header) when
+deployed.
 
 **Non-streaming:**
 
@@ -97,17 +101,17 @@ curl <base_url>/responses/resp_...
 > durability (crash recovery, cross-pod resume, surviving the ~120s Apps proxy timeout), back it with
 > a durable store.
 
-**Multi-turn** — pass the `session_id` returned in `custom_outputs` back on the next request:
+**Multi-turn** — pass the `session_id` returned by the first turn back on the next request:
 
 ```bash
-# First turn returns: "custom_outputs": { "session_id": "..." }
+# First turn returns: { "output": [...], "session_id": "..." }
 curl -X POST <base_url>/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "My name is Alice" }] }'
 
 # Second turn — agent remembers the first
 curl -X POST <base_url>/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "What is my name?" }],
-        "custom_inputs": { "session_id": "<session-id>" } }'
+        "session_id": "<session-id>" }'
 ```
 
 ## Customize the agent

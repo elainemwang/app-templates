@@ -10,7 +10,6 @@ import os
 
 import pytest
 from agents.tool import FunctionTool
-from mlflow.types.responses import ResponsesAgentRequest
 
 from agent.mason.session_store import create_session
 from agent.mason.wire.inbound import get_session_id
@@ -31,19 +30,15 @@ def test_session_defaults_to_sqlite():
     assert hasattr(session, "get_items")
 
 
-def test_session_id_from_custom_inputs():
-    request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": "hi"}],
-        custom_inputs={"session_id": "abc-123"},
-    )
+def test_session_id_from_request():
+    request = {"input": [{"role": "user", "content": "hi"}], "session_id": "abc-123"}
     assert get_session_id(request) == "abc-123"
 
 
 def test_session_id_generated_when_absent():
-    request = ResponsesAgentRequest(input=[{"role": "user", "content": "hi"}])
-    generated = get_session_id(request)
+    generated = get_session_id({"input": [{"role": "user", "content": "hi"}]})
     assert generated and generated != get_session_id(
-        ResponsesAgentRequest(input=[{"role": "user", "content": "hi"}])
+        {"input": [{"role": "user", "content": "hi"}]}
     )
 
 

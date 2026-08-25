@@ -3,11 +3,6 @@ from contextlib import AsyncExitStack
 
 from agents import Agent, Runner, set_default_openai_api, set_default_openai_client
 from databricks_openai import AsyncDatabricksOpenAI
-from mlflow.types.responses import (
-    ResponsesAgentRequest,
-    ResponsesAgentResponse,
-    ResponsesAgentStreamEvent,
-)
 
 from agent.mason import mcp_runtime, tracing
 
@@ -38,8 +33,12 @@ def create_agent(mcp_servers: list | None = None) -> Agent:
     )
 
 
-async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentResponse:
-    """Run one turn to completion. Called by the server for POST /invocations and /responses."""
+async def invoke_handler(request: dict) -> dict:
+    """Run one turn to completion. Called by the server for POST /invocations and /responses.
+
+    ``request`` is a Responses-shaped dict (``input`` list + optional ``session_id``); the returned
+    dict carries the new output items and the ``session_id`` to pass back on the next turn.
+    """
     session_id = get_session_id(request)
     tracing.tag_session(session_id)
     session = create_session(session_id)
@@ -48,15 +47,13 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
         agent = create_agent(mcp_servers=await mcp_runtime.connect(stack))
         messages = await deduplicate_input(request, session)
         result = await Runner.run(agent, messages, session=session)
-    return ResponsesAgentResponse(
-        output=[item.to_input_item() for item in result.new_items],
-        custom_outputs={"session_id": session.session_id},
-    )
+    return {
+        "output": [item.to_input_item() for item in result.new_items],
+        "session_id": session.session_id,
+    }
 
 
-async def stream_handler(
-    request: ResponsesAgentRequest,
-) -> AsyncGenerator[ResponsesAgentStreamEvent, None]:
+async def stream_handler(request: dict) -> AsyncGenerator[dict, None]:
     """Stream one turn's Responses events. Called by the server when a request sets stream=true."""
     session_id = get_session_id(request)
     tracing.tag_session(session_id)
