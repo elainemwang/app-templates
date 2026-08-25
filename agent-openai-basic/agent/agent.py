@@ -1,5 +1,5 @@
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
-from typing import AsyncGenerator
 
 from agents import Agent, Runner, set_default_openai_api, set_default_openai_client
 from databricks_openai import AsyncDatabricksOpenAI
@@ -12,11 +12,15 @@ from mlflow.types.responses import (
 
 from agent import mcps
 from agent.mason import tracing
-from agent.mason.memory import memory_tools  # swap for a databricks-openai helper when it ships
+
+# memory_tools: swap for a databricks-openai helper when it ships.
+from agent.mason.memory import memory_tools
 from agent.mason.session_store import create_session
 from agent.mason.wire.inbound import deduplicate_input, get_session_id
 from agent.mason.wire.outbound import process_agent_stream_events
-from agent.tools import all_tools  # importing the package auto-registers every tool module
+
+# Importing the tools package auto-registers every tool module.
+from agent.tools import all_tools
 
 
 def configure() -> None:
