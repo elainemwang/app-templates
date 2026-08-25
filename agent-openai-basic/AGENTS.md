@@ -21,7 +21,7 @@ No database needed — sessions use a local SQLite file by default.
 | --- | --- |
 | Change model / instructions | `agent/agent.py` (`create_agent`) |
 | Add a function tool | new `*.py` in `agent/tools/` with a `@function_tool` function (auto-collected) |
-| Add an MCP server | append an `MCPServer` to `build_mcp_servers()` in `agent/mcps.py` |
+| Add an MCP server | append one to `build_mcp_servers()` in `agent/mcps.py` (e.g. `McpServer.from_uc_function(...)` from `databricks_openai.agents`) |
 | Change how a request maps to a run | `agent/agent.py` (`@invoke` / `@stream` handlers) |
 | Change the session store | `agent/session_store.py` |
 | Server / durability wiring | `server/start_server.py` (rarely needed) |

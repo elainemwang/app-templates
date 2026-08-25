@@ -15,17 +15,14 @@ from agents.mcp import MCPServer, MCPServerManager
 def build_mcp_servers() -> list[MCPServer]:
     """Return the MCP servers to offer the agent. Empty by default — add your own.
 
-    Example (Databricks-managed MCP over the workspace host, authed as the app SP):
+    Example (a Databricks-managed MCP, authed as the app service principal). ``McpServer`` from
+    databricks-openai handles the OAuth and builds the URL; ``from_uc_function`` / ``from_vector_search``
+    take Unity Catalog coordinates instead of a raw URL:
 
-        from agents.mcp import MCPServerStreamableHttp, MCPServerStreamableHttpParams
-        from databricks.sdk import WorkspaceClient
+        from databricks_openai.agents import McpServer
 
-        host = WorkspaceClient().config.host
         return [
-            MCPServerStreamableHttp(
-                params=MCPServerStreamableHttpParams(url=f"{host}/api/2.0/mcp/functions/system/ai"),
-                name="system_ai",
-            ),
+            McpServer.from_uc_function(catalog="system", schema="ai"),
         ]
     """
     return []

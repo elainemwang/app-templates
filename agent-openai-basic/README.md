@@ -94,7 +94,9 @@ curl -X POST <base_url>/responses -H "Content-Type: application/json" \
 - **Model / instructions:** `create_agent()` in `agent/agent.py`.
 - **Add a tool:** drop a new file in `agent/tools/` with a `@function_tool`-decorated function; it's
   collected automatically (see `agent/tools/sample_tool.py`). No wiring to edit.
-- **Add an MCP server:** append an `MCPServer` to `build_mcp_servers()` in `agent/mcps.py`.
+- **Add an MCP server:** append one to `build_mcp_servers()` in `agent/mcps.py` — e.g.
+  `McpServer.from_uc_function(catalog="system", schema="ai")` (from `databricks_openai.agents`,
+  handles Databricks OAuth for you).
 - **Change the session store:** `agent/session_store.py` (SQLite by default; managed store when `AGENT_SESSION_STORE` is set).
 - **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `agent/tools/memory.py`
   then registers `remember`/`recall` tools (persist/search facts across conversations). Unset → not registered.
