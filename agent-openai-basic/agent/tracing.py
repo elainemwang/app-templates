@@ -9,12 +9,16 @@ by env — so this whole module is a candidate to move behind an SDK helper.
 import os
 
 import mlflow
+from agents.tracing import set_trace_processors
 
 ENABLED = bool(os.getenv("MLFLOW_EXPERIMENT_ID") and os.getenv("MLFLOW_TRACKING_URI"))
 
 
 def configure() -> None:
-    """Enable MLflow autolog when configured, else disable tracing. Call once at startup."""
+    """Wire up tracing. Call once at startup."""
+    # Clear the Agents SDK's default trace processors so it doesn't export to OpenAI's backend;
+    # MLflow's autolog (below) is the only trace sink we want.
+    set_trace_processors([])
     if ENABLED:
         mlflow.openai.autolog()
     else:

@@ -2,7 +2,6 @@ from contextlib import AsyncExitStack
 from typing import AsyncGenerator
 
 from agents import Agent, Runner, set_default_openai_api, set_default_openai_client
-from agents.tracing import set_trace_processors
 from databricks_openai import AsyncDatabricksOpenAI
 from mlflow.genai.agent_server import invoke, stream
 from mlflow.types.responses import (
@@ -22,7 +21,6 @@ def configure() -> None:
     """Wire up global agent-SDK state; call once at server startup."""
     set_default_openai_client(AsyncDatabricksOpenAI())
     set_default_openai_api("responses")
-    set_trace_processors([])
     tracing.configure()
 
 
