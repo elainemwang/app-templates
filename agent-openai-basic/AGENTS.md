@@ -23,9 +23,13 @@ No database needed — sessions use a local SQLite file by default.
 | Add a function tool | new `*.py` in `agent/tools/` with a `@function_tool` function (auto-collected) |
 | Add an MCP server | append one to `build_mcp_servers()` in `agent/mcps.py` (e.g. `McpServer.from_uc_function(...)` from `databricks_openai.agents`) |
 | Change how a request maps to a run | `agent/agent.py` (`@invoke` / `@stream` handlers) |
-| Change the session store | `agent/session_store.py` |
+| Change the session store | `agent/mason/session_store.py` |
 | Server / durability wiring | `server/start_server.py` (rarely needed) |
 | Add a test | `tests/` (hermetic; gate model calls on a workspace profile — see `test_agent.py`) |
+
+`agent/mason/` holds plumbing (session store, tracing, wire translation) slated to move into
+Databricks SDKs — grouped so that migration is localized. You rarely edit it; build the agent in
+`agent/agent.py` and `agent/tools/`.
 
 ## How tools register
 
@@ -36,9 +40,9 @@ add a file to `agent/tools/`.
 
 ## Sessions & durability
 
-- Default: `agent/session_store.py`'s `create_session()` returns a local `SQLiteSession` — no database.
+- Default: `agent/mason/session_store.py`'s `create_session()` returns a local `SQLiteSession` — no database.
 - **Two independent durable stores, each with its own env var:**
-  - `AGENT_SESSION_STORE` (a managed session store name) → `session_store.py` persists the
+  - `AGENT_SESSION_STORE` (a managed session store name) → `mason/session_store.py` persists the
     transcript to that store's `agents/v1` items API (durable conversation history).
   - `LAKEBASE_AUTOSCALING_ENDPOINT` → `start_server.py` passes it into `LongRunningAgentServer` for
     its durable server store (background mode + crash recovery).
@@ -60,7 +64,7 @@ skip (the server logs that it skipped and boots normally).
 
 ## Notes for maintainers
 
-- `agent/wire/` is OpenAI-Agents-SDK-specific (inbound request→SDK input; outbound SDK events→wire,
+- `agent/mason/wire/` is OpenAI-Agents-SDK-specific (inbound request→SDK input; outbound SDK events→wire,
   surfacing tool-call outputs the Responses raw event stream omits).
 - `mcp<2` is pinned in `pyproject.toml` because `databricks-openai` imports a symbol removed in
   `mcp` 2.0; remove the pin when `databricks-openai` supports `mcp>=2`.

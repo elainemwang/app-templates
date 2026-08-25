@@ -18,7 +18,7 @@ from agents.memory.sqlite_session import SQLiteSession
 from databricks.sdk import WorkspaceClient
 
 # A file (not ":memory:") so local history is shared across requests and survives restarts.
-_LOCAL_SESSION_DB_PATH = os.getenv("LOCAL_SESSION_DB_PATH", "local_agent_sessions.db")
+_DEFAULT_LOCAL_SESSION_DB_PATH = "local_agent_sessions.db"
 _AGENTS_V1 = "/api/agents/v1"
 
 
@@ -60,4 +60,5 @@ def create_session(session_id: str) -> SessionABC:
     store = os.getenv("AGENT_SESSION_STORE")
     if store:
         return DatabricksSessionStore(store, session_id)
-    return SQLiteSession(session_id, _LOCAL_SESSION_DB_PATH)
+    db_path = os.getenv("LOCAL_SESSION_DB_PATH", _DEFAULT_LOCAL_SESSION_DB_PATH)
+    return SQLiteSession(session_id, db_path)

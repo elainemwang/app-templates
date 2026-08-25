@@ -12,9 +12,9 @@ import pytest
 from agents.tool import FunctionTool
 from mlflow.types.responses import ResponsesAgentRequest
 
-from agent.session_store import create_session
+from agent.mason.session_store import create_session
+from agent.mason.wire.inbound import get_session_id
 from agent.tools import all_tools
-from agent.wire.inbound import get_session_id
 
 
 def test_tools_autoregister():

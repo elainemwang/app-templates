@@ -17,20 +17,25 @@ agent/                 # the agent (reasoning plane) — this is what you edit
   agent.py             #   @invoke / @stream handlers + create_agent()
   tools/               #   function tools — drop a *.py file here to add one (auto-collected)
     sample_tool.py     #     get_current_time — a working example (@function_tool)
+    memory.py          #     remember / recall — registered only when AGENT_MEMORY_STORE is set
   mcps.py              #   MCP servers: none by default; add to build_mcp_servers() to offer some
-  session_store.py     #   session store: local SQLite by default; managed store when AGENT_SESSION_STORE is set
-  wire/                #   Responses <-> agent-SDK translation
-    inbound.py         #     request -> run input (session id, input dedup)
-    outbound.py        #     SDK stream events -> Responses wire events (surfaces tool outputs)
+  mason/               #   plumbing that will move into Databricks SDKs later — rarely edited
+    session_store.py   #     session store: local SQLite by default; managed store when AGENT_SESSION_STORE is set
+    tracing.py         #     MLflow tracing setup (on only when both MLFLOW_* vars are set)
+    wire/              #     Responses <-> agent-SDK translation
+      inbound.py       #       request -> run input (session id, input dedup)
+      outbound.py      #       SDK stream events -> Responses wire events (surfaces tool outputs)
 server/                # the durable plane (LongRunningAgentServer wiring) — rarely edited
   start_server.py      #   builds the server; passes LAKEBASE_AUTOSCALING_ENDPOINT for durability if set
 tests/
   test_agent.py        #   hermetic smoke tests + one gated live model call
 ```
 
-`tools/` is a drop-in package: add a `*.py` with a `@function_tool` function and it's auto-collected
-(no edits to existing code); it ships a working sample. `mcps.py` exposes `build_mcp_servers()`
-(empty by default — add servers to offer them). `session_store.py` defaults to local SQLite and
+You edit `agent/agent.py` and `agent/tools/`; everything in `agent/mason/` is plumbing (session
+store, tracing, wire translation) that's slated to move into Databricks SDKs, grouped so that
+migration is a localized change. `tools/` is a drop-in package: add a `*.py` with a `@function_tool`
+function and it's auto-collected (no edits to existing code). `mcps.py` exposes `build_mcp_servers()`
+(empty by default — add servers to offer them). `mason/session_store.py` defaults to local SQLite and
 switches to a Databricks managed session store when `AGENT_SESSION_STORE` is set.
 
 ## Run locally
@@ -97,7 +102,7 @@ curl -X POST <base_url>/responses -H "Content-Type: application/json" \
 - **Add an MCP server:** append one to `build_mcp_servers()` in `agent/mcps.py` — e.g.
   `McpServer.from_uc_function(catalog="system", schema="ai")` (from `databricks_openai.agents`,
   handles Databricks OAuth for you).
-- **Change the session store:** `agent/session_store.py` (SQLite by default; managed store when `AGENT_SESSION_STORE` is set).
+- **Change the session store:** `agent/mason/session_store.py` (SQLite by default; managed store when `AGENT_SESSION_STORE` is set).
 - **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `agent/tools/memory.py`
   then registers `remember`/`recall` tools (persist/search facts across conversations). Unset → not registered.
 
@@ -144,7 +149,7 @@ created and no traces are exported. Nothing else in the app code changes.
 Two independent durable stores, each set via `app.yaml` env:
 
 **Durable conversation history** — `AGENT_SESSION_STORE` = a Databricks managed session store name.
-`session_store.py` then persists the transcript to that store's `agents/v1` items API (shared across
+`mason/session_store.py` then persists the transcript to that store's `agents/v1` items API (shared across
 replicas, survives restarts) instead of local SQLite.
 
 **Long-running background execution + crash recovery** — a Lakebase instance attached to the app as
@@ -172,7 +177,7 @@ durable server store with a node-local transcript (or vice versa).
 
 ## Notes
 
-- **`agent/wire/` is OpenAI-Agents-SDK-specific** — under the Responses API the SDK's
+- **`agent/mason/wire/` is OpenAI-Agents-SDK-specific** — under the Responses API the SDK's
   events pass through as-is; this only surfaces tool-call outputs (which the raw event stream
   omits).
 - **`mcp<2` pin** (`pyproject.toml`): `databricks-openai` currently imports a symbol removed in
