@@ -12,6 +12,7 @@ from mlflow.types.responses import (
 
 from agent import mcps
 from agent.mason import tracing
+from agent.mason.memory import memory_tools  # swap for a databricks-openai helper when it ships
 from agent.mason.session_store import create_session
 from agent.mason.wire.inbound import deduplicate_input, get_session_id
 from agent.mason.wire.outbound import process_agent_stream_events
@@ -30,7 +31,7 @@ def create_agent(mcp_servers: list | None = None) -> Agent:
         name="Agent",
         instructions="You are a helpful assistant.",
         model="databricks-gpt-5-2",
-        tools=all_tools(),
+        tools=[*all_tools(), *memory_tools()],
         mcp_servers=mcp_servers or [],
     )
 

@@ -17,10 +17,10 @@ agent/                 # the agent (reasoning plane) — this is what you edit
   agent.py             #   @invoke / @stream handlers + create_agent()
   tools/               #   function tools — drop a *.py file here to add one (auto-collected)
     sample_tool.py     #     get_current_time — a working example (@function_tool)
-    memory.py          #     remember / recall — registered only when AGENT_MEMORY_STORE is set
   mcps.py              #   MCP servers: none by default; add to build_mcp_servers() to offer some
   mason/               #   plumbing that will move into Databricks SDKs later — rarely edited
     session_store.py   #     session store: local SQLite by default; managed store when AGENT_SESSION_STORE is set
+    memory.py          #     remember / recall — memory_tools() returns them when AGENT_MEMORY_STORE is set
     tracing.py         #     MLflow tracing setup (on only when both MLFLOW_* vars are set)
     wire/              #     Responses <-> agent-SDK translation
       inbound.py       #       request -> run input (session id, input dedup)
@@ -103,8 +103,9 @@ curl -X POST <base_url>/responses -H "Content-Type: application/json" \
   `McpServer.from_uc_function(catalog="system", schema="ai")` (from `databricks_openai.agents`,
   handles Databricks OAuth for you).
 - **Change the session store:** `agent/mason/session_store.py` (SQLite by default; managed store when `AGENT_SESSION_STORE` is set).
-- **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `agent/tools/memory.py`
-  then registers `remember`/`recall` tools (persist/search facts across conversations). Unset → not registered.
+- **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `create_agent()`
+  then includes the `remember`/`recall` tools from `agent/mason/memory.py` (persist/search facts across
+  conversations). Unset → the model isn't offered them.
 
 ## Test
 
