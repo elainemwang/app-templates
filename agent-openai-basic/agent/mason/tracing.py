@@ -11,15 +11,19 @@ import os
 import mlflow
 from agents.tracing import set_trace_processors
 
-ENABLED = bool(os.getenv("MLFLOW_EXPERIMENT_ID") and os.getenv("MLFLOW_TRACKING_URI"))
+# Snapshotted once by configure() at startup (after .env is loaded) rather than at import, so this
+# module has no import-time side effects and load order does not matter.
+_enabled = False
 
 
 def configure() -> None:
     """Wire up tracing. Call once at startup."""
+    global _enabled
+    _enabled = bool(os.getenv("MLFLOW_EXPERIMENT_ID") and os.getenv("MLFLOW_TRACKING_URI"))
     # Clear the Agents SDK's default trace processors so it doesn't export to OpenAI's backend;
     # MLflow's autolog (below) is the only trace sink we want.
     set_trace_processors([])
-    if ENABLED:
+    if _enabled:
         mlflow.openai.autolog()
     else:
         # The agent-server framework wraps every request in a span regardless; without an
@@ -29,5 +33,5 @@ def configure() -> None:
 
 def tag_session(session_id: str) -> None:
     """Tag the active MLflow trace with the session id, when tracing is enabled."""
-    if ENABLED and session_id:
+    if _enabled and session_id:
         mlflow.update_current_trace(metadata={"mlflow.trace.session": session_id})

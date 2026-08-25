@@ -1,19 +1,17 @@
-"""Agent server entry point. load_dotenv must run before agent imports (auth config)."""
+"""Agent server entry point."""
 
-# ruff: noqa: E402
 import os
 from pathlib import Path
 
+from databricks_ai_bridge.long_running import LongRunningAgentServer
 from dotenv import load_dotenv
 
-# Load env vars from .env before any other imports (agent needs auth config)
+# Importing the agent registers its @invoke/@stream handlers; the import is side-effect-free (no env
+# is read until configure()), so it can sit with the other imports.
+import agent.agent
+
+# Load .env before the runtime steps below read env (agent client auth + tracing config).
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
-
-from databricks_ai_bridge.long_running import LongRunningAgentServer
-
-# Import the agent to register the @invoke/@stream functions, then configure global SDK state
-# (agent client + tracing). configure() is a startup step, not an import side effect.
-import agent.agent  # noqa: F401
 
 agent.agent.configure()
 
