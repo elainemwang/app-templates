@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
 
 from databricks_ai_bridge.long_running import LongRunningAgentServer
-from mlflow.genai.agent_server import setup_mlflow_git_based_version_tracking
 
 # Import the agent to register the @invoke/@stream functions, then configure global SDK state
 # (agent client + tracing). configure() is a startup step, not an import side effect.
@@ -28,11 +27,6 @@ agent_server = LongRunningAgentServer(
 
 # Module-level app so uvicorn can import it by string (and to enable multiple workers).
 app = agent_server.app
-
-# MLflow tracing is optional: enabled only when both the destination and experiment are set (same
-# gate as the agent). Skip it otherwise so the server boots with no tracing backend configured.
-if os.getenv("MLFLOW_TRACKING_URI") and os.getenv("MLFLOW_EXPERIMENT_ID"):
-    setup_mlflow_git_based_version_tracking()
 
 
 def main():
