@@ -37,8 +37,9 @@ curl -sN -X POST http://localhost:8000/responses \
 curl -sX POST http://localhost:8000/responses \
   -H "Content-Type: application/json" \
   -d '{"input": [{"role": "user", "content": "Do something slow."}], "background": true}'
-# -> {"id": "resp_...", "status": "in_progress"}
-curl -s http://localhost:8000/responses/resp_...        # -> {"status": "completed", "output": [...]}
+# -> {"id": "resp_1a2b3c4d5e6f7g8h9i0j1k2l", "status": "in_progress"}
+curl -s http://localhost:8000/responses/resp_1a2b3c4d5e6f7g8h9i0j1k2l
+# -> {"id": "resp_1a2b3c4d5e6f7g8h9i0j1k2l", "status": "completed", "output": [...], "session_id": "..."}
 
 # Multi-turn — pass back the returned session_id (same process; in-memory checkpointer)
 curl -sX POST http://localhost:8000/responses \
