@@ -7,9 +7,9 @@ ends: `POST /responses` / `POST /invocations` take an `input` list of LangChain 
 (streaming via SSE, plus an in-memory `background` mode with `GET /responses/{id}`) and return
 LangChain messages — nothing is reshaped into the Responses contract.
 
-The HTTP surface is hand-written in `server/app.py` (routes, SSE framing, tracing spans, the
-in-memory background store), so the template shows exactly how the agent is served — request and
-response bodies are plain dicts, no wrapper types.
+The HTTP surface is hand-written in `server/app.py` (routes, SSE framing, tracing spans, background
+wiring), so the template shows exactly how the agent is served — request and response bodies are
+plain dicts, no wrapper types.
 
 This template is API-first (no bundled UI). Call it with the OpenAI SDK, `curl`, or from your own
 frontend / model-serving client.
@@ -75,14 +75,15 @@ agent — plus an optional top-level `session_id` for multi-turn. The reply is
 `{ "output": [...], "session_id": "..." }`, where `output` is a list of **LangChain message dicts**
 (LangGraph's native shape — e.g. `{ "type": "ai", "content": "...", "tool_calls": [...] }`), not
 Responses items. Streaming frames are likewise native: `{ "type": "message", "message": {...} }` for
-completed messages and `{ "type": "delta", "content": "...", "id": "..." }` for text chunks. Replace
-`<base_url>` with `http://localhost:8000` locally, or `https://<app>.databricksapps.com` (with an
-`Authorization: Bearer <token>` header) when deployed.
+completed messages and `{ "type": "delta", "content": "...", "id": "..." }` for text chunks.
+
+The examples below use `http://localhost:8000` (local dev). When deployed, use
+`https://<app>.databricksapps.com` with an `Authorization: Bearer <token>` header.
 
 **Non-streaming:**
 
 ```bash
-curl -X POST <base_url>/responses \
+curl -X POST http://localhost:8000/responses \
   -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "hi" }] }'
 ```
@@ -93,11 +94,11 @@ curl -X POST <base_url>/responses \
 
 ```bash
 # returns: { "id": "resp_1a2b3c4d5e6f7g8h9i0j1k2l", "status": "in_progress" }
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+curl -X POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "do something" }], "background": true }'
 
 # poll with the returned id until status is "completed"
-curl <base_url>/responses/resp_1a2b3c4d5e6f7g8h9i0j1k2l
+curl http://localhost:8000/responses/resp_1a2b3c4d5e6f7g8h9i0j1k2l
 ```
 
 > Background mode here is **in-memory and single-process** — a teaching stand-in. Runs are not
@@ -109,11 +110,11 @@ curl <base_url>/responses/resp_1a2b3c4d5e6f7g8h9i0j1k2l
 
 ```bash
 # First turn returns: { "output": [...], "session_id": "..." }
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+curl -X POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "My name is Alice" }] }'
 
 # Second turn — agent remembers the first (same process; see durability note below)
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+curl -X POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "What is my name?" }],
         "session_id": "<session-id>" }'
 ```
