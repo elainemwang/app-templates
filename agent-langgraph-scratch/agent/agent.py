@@ -47,9 +47,8 @@ async def stream_handler(request: dict) -> AsyncGenerator[dict, None]:
     tracing.tag_session(session_id)
 
     agent = await create_agent_graph()
-    # Pass the client's input straight to LangGraph — LangChain accepts message dicts natively, so
-    # no Responses->chat conversion. Send only the new turn's message(s); the checkpointer supplies
-    # prior history for the session's thread.
+    # Pass the client's input straight to LangGraph — LangChain accepts message dicts natively. Send
+    # only the new turn's message(s); the checkpointer supplies prior history for the session's thread.
     messages = {"messages": request.get("input") or []}
 
     async for event in process_agent_astream_events(
