@@ -30,13 +30,13 @@ async def create_agent_graph():
 async def invoke_handler(request: dict) -> dict:
     """Run one turn to completion. Called by the server for POST /invocations and /responses.
 
-    ``request`` is a Responses-shaped dict (``input`` list + optional ``session_id``); the returned
-    dict carries the new output items and the ``session_id`` to pass back on the next turn.
+    ``request`` is a dict with an ``input`` list + optional ``session_id``; the returned dict carries
+    the run's new messages (LangChain-native shape) and the ``session_id`` to pass back next turn.
     """
     outputs = [
-        event["item"]
+        event["message"]
         async for event in stream_handler(request)
-        if event.get("type") == "response.output_item.done"
+        if event.get("type") == "message"
     ]
     return {"output": outputs, "session_id": get_session_id(request)}
 

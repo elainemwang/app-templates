@@ -2,10 +2,10 @@
 
 A [LangGraph](https://langchain-ai.github.io/langgraph/) agent **backend** for Databricks Apps,
 served from a **from-scratch FastAPI app** — no serving framework. It runs locally with **no
-database and no setup** — just an auth profile — and speaks the
-[Responses](https://platform.openai.com/docs/api-reference/responses) input/output shape:
-`POST /responses`, `POST /invocations`, streaming via SSE, and an in-memory `background` mode with
-`GET /responses/{id}`.
+database and no setup** — just an auth profile. It takes a Responses-style `input` list on
+`POST /responses` / `POST /invocations` (streaming via SSE, plus an in-memory `background` mode with
+`GET /responses/{id}`) and returns LangGraph's **native** output — LangChain message dicts, not
+reshaped into the Responses contract.
 
 The HTTP surface is hand-written in `server/app.py` (routes, SSE framing, tracing spans, the
 in-memory background store), so the template shows exactly how the agent is served — request and
@@ -71,9 +71,12 @@ storage, tracing — is off by default and requires no setup.
 `POST /responses` (and its alias `POST /invocations`) take a JSON body with an `input` list — the
 same items the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses)
 uses — plus an optional top-level `session_id` for multi-turn. The reply is
-`{ "output": [...], "session_id": "..." }`. Replace `<base_url>` with `http://localhost:8000`
-locally, or `https://<app>.databricksapps.com` (with an `Authorization: Bearer <token>` header) when
-deployed.
+`{ "output": [...], "session_id": "..." }`, where `output` is a list of **LangChain message dicts**
+(LangGraph's native shape — e.g. `{ "type": "ai", "content": "...", "tool_calls": [...] }`), not
+Responses items. Streaming frames are likewise native: `{ "type": "message", "message": {...} }` for
+completed messages and `{ "type": "delta", "content": "...", "id": "..." }` for text chunks. Replace
+`<base_url>` with `http://localhost:8000` locally, or `https://<app>.databricksapps.com` (with an
+`Authorization: Bearer <token>` header) when deployed.
 
 **Non-streaming:**
 
@@ -188,8 +191,9 @@ swap `agent/mason/session_store.py`'s checkpointer for a `PostgresSaver` over La
 
 ## Notes
 
-- **`agent/mason/wire/` is LangGraph-specific** — `inbound`/`outbound` translate the Responses wire
-  format to/from LangGraph. **`server/app.py` is SDK-agnostic** — it hosts any agent exposing the
-  `invoke_handler`/`stream_handler` dict contract.
+- **`agent/mason/wire/` is LangGraph-specific** — `inbound` reads the session id (input is converted
+  to LangGraph messages in the handler); `outbound` serializes LangGraph's native astream events to
+  JSON, without reshaping them into the Responses contract. **`server/app.py` is SDK-agnostic** — it
+  hosts any agent exposing the `invoke_handler`/`stream_handler` dict contract.
 - **Background mode is in-memory** (`server/app.py`) — non-durable, single-process; see the note
   under the client contract.

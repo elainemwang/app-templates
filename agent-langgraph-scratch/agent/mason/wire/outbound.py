@@ -1,25 +1,19 @@
-"""Serialize LangGraph astream events to JSON dicts — the client receives Responses-shaped frames.
+"""Serialize LangGraph astream events to JSON dicts — the SDK's native shape, no imposed contract.
 
 ``astream(stream_mode=["updates", "messages"])`` yields two event shapes: ``updates`` (completed
-node outputs — full messages, incl. tool calls/results) and ``messages`` (token-level chunks for
-streaming text). We convert completed messages to Responses output items and text chunks to text
-deltas, then emit each as a plain dict (the FastAPI layer wraps it in an SSE ``data:`` frame).
-
-The MLflow ``mlflow.types.responses`` helpers are used purely as converters here — not the agent
-server framework.
+node outputs — full LangChain messages, incl. tool calls/results) and ``messages`` (token-level
+chunks for streaming text). We relay each as-is, made JSON: completed messages under
+``{"type": "message", "message": <LangChain message dict>}`` and text chunks under
+``{"type": "delta", "content": ..., "id": ...}``. Nothing is reshaped into the Responses contract —
+the client receives LangGraph's native output. (The AgentServer-backed templates emit Responses-shaped
+events; this from-scratch one shows the raw SDK shape instead.)
 """
 
-import json
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any
 
-from langchain.messages import AIMessageChunk, ToolMessage
-from mlflow.types.responses import (
-    ResponsesAgentStreamEvent,
-    create_text_delta,
-    output_to_responses_items_stream,
-)
+from langchain.messages import AIMessageChunk
 
 logger = logging.getLogger(__name__)
 
@@ -27,24 +21,18 @@ logger = logging.getLogger(__name__)
 async def process_agent_astream_events(
     async_stream: AsyncIterator[Any],
 ) -> AsyncGenerator[dict, None]:
-    """Yield each LangGraph stream event as a JSON-able Responses-shaped dict."""
+    """Yield each LangGraph stream event as a JSON-able dict in LangChain's native shape."""
     async for event in async_stream:
         mode, payload = event[0], event[1]
         if mode == "updates":
             for node_data in payload.values():
                 messages = node_data.get("messages", []) if isinstance(node_data, dict) else []
                 for msg in messages:
-                    # Tool results may carry non-string content; the Responses items stream needs str.
-                    if isinstance(msg, ToolMessage) and not isinstance(msg.content, str):
-                        msg.content = json.dumps(msg.content)
-                for item in output_to_responses_items_stream(messages):
-                    yield item.model_dump() if hasattr(item, "model_dump") else dict(item)
+                    yield {"type": "message", "message": msg.model_dump()}
         elif mode == "messages":
             try:
                 chunk = payload[0]
                 if isinstance(chunk, AIMessageChunk) and (content := chunk.content):
-                    yield ResponsesAgentStreamEvent(
-                        **create_text_delta(delta=content, item_id=chunk.id)
-                    ).model_dump()
+                    yield {"type": "delta", "content": content, "id": chunk.id}
             except Exception:
                 logger.exception("Error processing agent stream chunk")

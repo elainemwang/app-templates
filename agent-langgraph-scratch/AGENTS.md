@@ -66,4 +66,5 @@ leave either half unset to skip. `server/app.py` opens a per-request span regard
 ## Notes for maintainers
 
 - `agent/mason/wire/` is LangGraph-specific (inbound request→session id; outbound `astream`
-  `updates`/`messages` events→JSON dicts). `server/app.py` is SDK-agnostic.
+  `updates`/`messages` events→native LangChain-message JSON dicts, not reshaped to Responses).
+  `server/app.py` is SDK-agnostic.
