@@ -193,9 +193,9 @@ restarts) instead of local SQLite. Unset → local SQLite.
 
 ## Notes
 
-- **`agent/mason/wire/` is OpenAI-Agents-SDK-specific** — `inbound`/`outbound` translate the
-  Responses wire format to/from the SDK. **`server/app.py` is SDK-agnostic** — it hosts any agent
-  exposing the `invoke_handler`/`stream_handler` dict contract.
+- **`agent/mason/wire/` is OpenAI-Agents-SDK-specific** — `inbound` pulls the session id and
+  `outbound` serializes the SDK's stream events to JSON. **`server/app.py` is SDK-agnostic** — it
+  hosts any agent exposing the `invoke_handler`/`stream_handler` dict contract.
 - **Background mode is in-memory** (`server/app.py`) — non-durable, single-process; see the note
   under the client contract.
 - **`mcp<2` pin** (`pyproject.toml`): `databricks-openai` currently imports a symbol removed in

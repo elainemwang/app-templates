@@ -1,5 +1,6 @@
-"""Wire translation between the Responses API and the OpenAI Agents SDK.
+"""OpenAI Agents SDK boundary.
 
-``inbound``: Responses request -> agent-SDK run input. ``outbound``: agent-SDK stream events ->
-Responses wire events. SDK-specific — a different harness would replace this layer.
+``inbound``: pull the session id from the request (its ``input`` is passed straight to the SDK).
+``outbound``: serialize the SDK's stream events to JSON dicts. SDK-specific — a different SDK would
+replace this layer.
 """
