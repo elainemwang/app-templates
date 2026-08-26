@@ -25,7 +25,8 @@ No database needed — conversation state uses an in-process LangGraph checkpoin
 | Add an MCP server | append a `DatabricksMCPServer` to `build_mcp_servers()` in `agent/mcps.py` |
 | Change how a request maps to a run | `agent/agent.py` (`invoke_handler` / `stream_handler`) |
 | Change the session checkpointer | `agent/mason/session_store.py` |
-| Change the HTTP surface (routes, SSE, background) | `server/app.py` |
+| Change the HTTP surface (routes, SSE, background wiring) | `server/app.py` |
+| Change the background-run store (make it durable) | `agent/mason/background.py` |
 | Add a test | `tests/` (hermetic; gate model calls on a workspace profile — see `test_agent.py`) |
 
 `server/app.py` is **SDK-agnostic** — it wires two generic handlers (`invoke_handler`/`stream_handler`,
@@ -47,7 +48,8 @@ a file to `agent/tools/`.
 - Default: `agent/mason/session_store.py`'s `checkpointer()` returns an in-process `InMemorySaver`,
   keyed per request by `thread_config(session_id)` — no database, multi-turn works in-process.
 - For durable, shared history, swap the checkpointer for a `PostgresSaver` over Lakebase.
-- Background mode (`server/app.py`) is in-memory / single-process — non-durable.
+- Background mode is in-memory / single-process — non-durable. The store is `agent/mason/background.py`
+  (wired in `server/app.py`); swap it for a durable backend for cross-restart/replica recovery.
 
 ## MLflow tracing
 
