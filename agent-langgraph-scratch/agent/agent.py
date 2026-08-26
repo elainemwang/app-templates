@@ -2,7 +2,6 @@ from collections.abc import AsyncGenerator
 
 from databricks_langchain import ChatDatabricks
 from langchain.agents import create_agent
-from mlflow.types.responses import to_chat_completions_input
 
 from agent.mason import mcp_runtime, tracing
 from agent.mason.memory import memory_tools
@@ -30,8 +29,9 @@ async def create_agent_graph():
 async def invoke_handler(request: dict) -> dict:
     """Run one turn to completion. Called by the server for POST /invocations and /responses.
 
-    ``request`` is a dict with an ``input`` list + optional ``session_id``; the returned dict carries
-    the run's new messages (LangChain-native shape) and the ``session_id`` to pass back next turn.
+    ``request`` is a dict with an ``input`` list of LangChain message dicts + optional
+    ``session_id``; the returned dict carries the run's new messages (LangChain-native shape) and the
+    ``session_id`` to pass back next turn.
     """
     outputs = [
         event["message"]
@@ -47,7 +47,10 @@ async def stream_handler(request: dict) -> AsyncGenerator[dict, None]:
     tracing.tag_session(session_id)
 
     agent = await create_agent_graph()
-    messages = {"messages": to_chat_completions_input(request.get("input") or [])}
+    # Pass the client's input straight to LangGraph — LangChain accepts message dicts natively, so
+    # no Responses->chat conversion. Send only the new turn's message(s); the checkpointer supplies
+    # prior history for the session's thread.
+    messages = {"messages": request.get("input") or []}
 
     async for event in process_agent_astream_events(
         agent.astream(input=messages, config=thread_config(session_id), stream_mode=["updates", "messages"])

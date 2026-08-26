@@ -2,10 +2,10 @@
 
 A [LangGraph](https://langchain-ai.github.io/langgraph/) agent **backend** for Databricks Apps,
 served from a **from-scratch FastAPI app** — no serving framework. It runs locally with **no
-database and no setup** — just an auth profile. It takes a Responses-style `input` list on
-`POST /responses` / `POST /invocations` (streaming via SSE, plus an in-memory `background` mode with
-`GET /responses/{id}`) and returns LangGraph's **native** output — LangChain message dicts, not
-reshaped into the Responses contract.
+database and no setup** — just an auth profile. It speaks LangGraph's **native** wire shape on both
+ends: `POST /responses` / `POST /invocations` take an `input` list of LangChain message dicts
+(streaming via SSE, plus an in-memory `background` mode with `GET /responses/{id}`) and return
+LangChain messages — nothing is reshaped into the Responses contract.
 
 The HTTP surface is hand-written in `server/app.py` (routes, SSE framing, tracing spans, the
 in-memory background store), so the template shows exactly how the agent is served — request and
@@ -68,9 +68,9 @@ storage, tracing — is off by default and requires no setup.
 
 ## Client contract
 
-`POST /responses` (and its alias `POST /invocations`) take a JSON body with an `input` list — the
-same items the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses)
-uses — plus an optional top-level `session_id` for multi-turn. The reply is
+`POST /responses` (and its alias `POST /invocations`) take a JSON body with an `input` list of
+**LangChain message dicts** (e.g. `{ "role": "user", "content": "..." }`) — passed straight to the
+agent — plus an optional top-level `session_id` for multi-turn. The reply is
 `{ "output": [...], "session_id": "..." }`, where `output` is a list of **LangChain message dicts**
 (LangGraph's native shape — e.g. `{ "type": "ai", "content": "...", "tool_calls": [...] }`), not
 Responses items. Streaming frames are likewise native: `{ "type": "message", "message": {...} }` for
