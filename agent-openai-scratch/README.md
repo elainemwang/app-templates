@@ -27,9 +27,9 @@ agent/                 # the agent (reasoning plane) — this is what you edit
     memory.py          #     remember / recall — memory_tools() returns them when AGENT_MEMORY_STORE is set
     tracing.py         #     MLflow tracing setup (on only when a destination + an experiment are set)
     mcp_runtime.py     #     connects the servers from mcps.build_mcp_servers() for each request
-    wire/              #     Responses <-> agent-SDK translation
-      inbound.py       #       request -> run input (session id, input dedup)
-      outbound.py      #       SDK stream events -> Responses wire events (surfaces tool outputs)
+    wire/              #     agent-SDK boundary
+      inbound.py       #       get_session_id (request input is passed straight to the SDK)
+      outbound.py      #       serialize the SDK's raw stream events to JSON dicts (no imposed contract)
 server/                # the HTTP surface — SDK-agnostic; rarely edited
   app.py               #   build_app(): FastAPI routes, SSE framing, tracing spans, in-memory background
   start_server.py      #   entry point: loads config, builds the app, runs uvicorn

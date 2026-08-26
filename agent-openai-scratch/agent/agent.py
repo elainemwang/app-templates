@@ -53,7 +53,7 @@ async def invoke_handler(request: dict) -> dict:
 
 
 async def stream_handler(request: dict) -> AsyncGenerator[dict, None]:
-    """Stream one turn's Responses events. Called by the server when a request sets stream=true."""
+    """Stream the SDK's run events as JSON dicts. Called by the server when a request sets stream=true."""
     session_id = get_session_id(request)
     tracing.tag_session(session_id)
     session = create_session(session_id)
