@@ -20,8 +20,6 @@ dependencies = [
     # compatible with mcp>=2.
     "mcp<2",
     "databricks-sdk>=0.79.0",
-    "databricks-agents>=1.9.3",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
 ]
 
 [build-system]
