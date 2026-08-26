@@ -25,13 +25,14 @@ No database needed — sessions use a local SQLite file by default.
 | Add an MCP server | append one to `build_mcp_servers()` in `agent/mcps.py` (e.g. `McpServer.from_uc_function(...)` from `databricks_openai.agents`) |
 | Change how a request maps to a run | `agent/agent.py` (`invoke_handler` / `stream_handler`) |
 | Change the session store | `agent/mason/session_store.py` |
-| Change the HTTP surface (routes, SSE, background) | `server/app.py` |
+| Change the HTTP surface (routes, SSE, background wiring) | `server/app.py` |
+| Change the background-run store (make it durable) | `agent/mason/background.py` |
 | Server entry point | `server/start_server.py` (rarely needed) |
 | Add a test | `tests/` (hermetic; gate model calls on a workspace profile — see `test_agent.py`) |
 
-`agent/mason/` holds plumbing (session store, tracing, MCP connection lifecycle, wire translation)
-slated to move into Databricks SDKs — grouped so that migration is localized. You rarely edit it;
-build the agent in `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`.
+`agent/mason/` holds plumbing (session store, tracing, MCP connection lifecycle, wire translation,
+background-run store) slated to move into Databricks SDKs — grouped so that migration is localized.
+You rarely edit it; build the agent in `agent/agent.py`, `agent/tools/`, and `agent/mcps.py`.
 
 ## How the server works
 
@@ -41,8 +42,9 @@ no serving framework, and SDK-agnostic (it only knows the `invoke_handler`/`stre
 contract) — that provides `POST /invocations` + `/responses` (sync, `stream: true` SSE, and
 `background: true`), `GET /responses/{id}`, and `/health`, wrapping each request in an MLflow span.
 
-**Background mode is in-memory and single-process** (a dict in `server/app.py`): non-durable, lost on
-restart, not shared across replicas. It demonstrates the submit→poll pattern; it is not production
+**Background mode is in-memory and single-process** — non-durable. The store is
+`agent/mason/background.py` (wired in `server/app.py`); swap it for a durable backend for
+cross-restart/replica recovery. It demonstrates the submit→poll pattern; it is not production
 durability.
 
 ## How tools register

@@ -27,11 +27,12 @@ agent/                 # the agent (reasoning plane) — this is what you edit
     memory.py          #     remember / recall — memory_tools() returns them when AGENT_MEMORY_STORE is set
     tracing.py         #     MLflow tracing setup (on only when a destination + an experiment are set)
     mcp_runtime.py     #     connects the servers from mcps.build_mcp_servers() for each request
+    background.py      #     BackgroundRuns: in-memory store for background runs; swap for a durable one
     wire/              #     agent-SDK boundary
       inbound.py       #       get_session_id (request input is passed straight to the SDK)
       outbound.py      #       serialize the SDK's raw stream events to JSON dicts (no imposed contract)
 server/                # the HTTP surface — SDK-agnostic; rarely edited
-  app.py               #   build_app(): FastAPI routes, SSE framing, tracing spans, in-memory background
+  app.py               #   build_app(): FastAPI routes, SSE framing, tracing spans, background wiring
   start_server.py      #   entry point: loads config, builds the app, runs uvicorn
 tests/
   test_agent.py        #   hermetic smoke tests + one gated live model call
@@ -128,7 +129,8 @@ curl -X POST <base_url>/responses -H "Content-Type: application/json" \
 - **Add long-term memory:** set `AGENT_MEMORY_STORE` to a managed memory store name; `create_agent()`
   then includes the `remember`/`recall` tools from `agent/mason/memory.py` (persist/search facts across
   conversations). Unset → the model isn't offered them.
-- **Change the HTTP surface:** `server/app.py` — routes, SSE framing, background store.
+- **Change the HTTP surface:** `server/app.py` — routes, SSE framing, background wiring (the run
+  store itself is `agent/mason/background.py`).
 
 ## Test
 
@@ -196,7 +198,7 @@ restarts) instead of local SQLite. Unset → local SQLite.
 - **`agent/mason/wire/` is OpenAI-Agents-SDK-specific** — `inbound` pulls the session id and
   `outbound` serializes the SDK's stream events to JSON. **`server/app.py` is SDK-agnostic** — it
   hosts any agent exposing the `invoke_handler`/`stream_handler` dict contract.
-- **Background mode is in-memory** (`server/app.py`) — non-durable, single-process; see the note
+- **Background mode is in-memory** (`agent/mason/background.py`, wired in `server/app.py`) — non-durable, single-process; see the note
   under the client contract.
 - **`mcp<2` pin** (`pyproject.toml`): `databricks-openai` currently imports a symbol removed in
   `mcp` 2.0. Remove the pin once `databricks-openai` supports `mcp>=2`.
