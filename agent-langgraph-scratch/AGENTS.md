@@ -16,6 +16,39 @@ uv run start-server           # http://localhost:8000
 
 No database needed — conversation state uses an in-process LangGraph checkpointer by default.
 
+## Sample requests
+
+`input` is a list of LangChain message dicts; the reply is `{ "output": [...], "session_id": "..." }`
+where `output` is LangChain messages (native shape, not Responses items).
+
+```bash
+# Sync — run a turn to completion
+curl -sX POST http://localhost:8000/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"role": "user", "content": "What time is it? Use your tool."}]}'
+
+# Streaming — SSE frames ending with `data: [DONE]`
+curl -sN -X POST http://localhost:8000/responses \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"role": "user", "content": "Count to 3."}], "stream": true}'
+# frames: {"type":"message","message":{...}} (completed) and {"type":"delta","content":"...","id":"..."}
+
+# Background — returns a resp_ id immediately; poll it
+curl -sX POST http://localhost:8000/responses \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"role": "user", "content": "Do something slow."}], "background": true}'
+# -> {"id": "resp_...", "status": "in_progress"}
+curl -s http://localhost:8000/responses/resp_...        # -> {"status": "completed", "output": [...]}
+
+# Multi-turn — pass back the returned session_id (same process; in-memory checkpointer)
+curl -sX POST http://localhost:8000/responses \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"role": "user", "content": "My name is Alice."}]}'
+curl -sX POST http://localhost:8000/responses \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"role": "user", "content": "What is my name?"}], "session_id": "<session-id>"}'
+```
+
 ## Where things live
 
 | You want to… | Edit |
