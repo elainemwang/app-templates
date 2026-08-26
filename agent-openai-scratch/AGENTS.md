@@ -22,20 +22,20 @@ Body is a Responses-shaped dict: `input` items + optional top-level `session_id`
 
 ```bash
 # Sync — returns { "output": [...items...], "session_id": "..." }
-curl -sX POST localhost:8000/invocations -H 'Content-Type: application/json' \
+curl -sX POST http://localhost:8000/invocations -H 'Content-Type: application/json' \
   -d '{"input":[{"role":"user","content":"What time is it? Use your tool."}]}'
 
 # Streaming — SSE frames of the SDK's raw events, ending with `data: [DONE]`
-curl -NsX POST localhost:8000/responses -H 'Content-Type: application/json' \
+curl -NsX POST http://localhost:8000/responses -H 'Content-Type: application/json' \
   -d '{"input":[{"role":"user","content":"hi"}],"stream":true}'
 
 # Background — returns { "id": "resp_...", "status": "in_progress" }; poll it
-curl -sX POST localhost:8000/responses -H 'Content-Type: application/json' \
+curl -sX POST http://localhost:8000/responses -H 'Content-Type: application/json' \
   -d '{"input":[{"role":"user","content":"do something"}],"background":true}'
-curl -s localhost:8000/responses/resp_...      # -> status / result
+curl -s http://localhost:8000/responses/resp_...      # -> status / result
 
 # Multi-turn — pass the returned session_id back (send only the new message)
-curl -sX POST localhost:8000/responses -H 'Content-Type: application/json' \
+curl -sX POST http://localhost:8000/responses -H 'Content-Type: application/json' \
   -d '{"input":[{"role":"user","content":"What is my name?"}],"session_id":"<id>"}'
 ```
 
