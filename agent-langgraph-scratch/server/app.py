@@ -18,21 +18,19 @@ Endpoints:
 
 Every request is wrapped in an MLflow span, so tracing works when configured.
 
-**Background mode here is in-memory and single-process** — a teaching stand-in, not durable. Runs
-live in a dict in this process: they do NOT survive a restart and are NOT shared across replicas.
-Production durability (crash recovery, cross-pod resume, surviving the ~120s Apps proxy timeout)
-would need a shared durable store behind ``_BackgroundRuns``.
+Background runs are tracked by ``agent/mason/background.py``'s ``BackgroundRuns`` — an in-memory,
+single-process stand-in by default (not durable); see that module for the durability swap.
 """
 
 import asyncio
 import json
-import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from typing import Any
 
 import mlflow
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+
+from agent.mason.background import BackgroundRuns
 
 # Request keys that control transport; stripped before the request reaches the handler.
 _STREAM_KEY = "stream"
@@ -48,31 +46,10 @@ def _sse(data: dict | str) -> str:
     return f"data: {json.dumps(data) if isinstance(data, dict) else data}\n\n"
 
 
-class _BackgroundRuns:
-    """In-memory store of background runs, keyed by response id. Single-process, non-durable."""
-
-    def __init__(self) -> None:
-        self._runs: dict[str, dict[str, Any]] = {}
-
-    def create(self) -> str:
-        response_id = f"resp_{uuid.uuid4().hex[:24]}"
-        self._runs[response_id] = {"status": "in_progress", "output": None, "error": None}
-        return response_id
-
-    def complete(self, response_id: str, output: dict) -> None:
-        self._runs[response_id] = {"status": "completed", "output": output, "error": None}
-
-    def fail(self, response_id: str, error: str) -> None:
-        self._runs[response_id] = {"status": "failed", "output": None, "error": error}
-
-    def get(self, response_id: str) -> dict | None:
-        return self._runs.get(response_id)
-
-
 def build_app(invoke_handler: InvokeHandler, stream_handler: StreamHandler) -> FastAPI:
     """Build the FastAPI app wiring the endpoints to the agent's invoke/stream handlers."""
     app = FastAPI(title="Agent Server")
-    runs = _BackgroundRuns()
+    runs = BackgroundRuns()
 
     async def _invoke(request: dict) -> dict:
         with mlflow.start_span(name="invoke_handler") as span:
