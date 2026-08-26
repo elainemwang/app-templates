@@ -65,7 +65,7 @@ curl -sX POST http://localhost:8000/responses \
 
 `server/app.py` is **SDK-agnostic** — it wires two generic handlers (`invoke_handler`/`stream_handler`,
 plain `dict -> dict` / `dict -> AsyncGenerator[dict]`) to the endpoints. The agent SDK lives entirely
-behind those handlers in `agent/agent.py`, so this file is identical across agent templates.
+behind those handlers in `agent/agent.py`, so the serving layer is the same regardless of SDK.
 
 `agent/mason/` holds plumbing (session checkpointer, tracing, MCP tool loading, wire translation)
 slated to move into Databricks SDKs — grouped so that migration is localized.
