@@ -20,4 +20,3 @@ async def process_agent_stream_events(
             yield {"type": event.type, "data": event.data.model_dump()}
         elif event.type == "run_item_stream_event":
             yield {"type": event.type, "name": event.name, "item": event.item.to_input_item()}
-        # agent_updated_stream_event: wraps an Agent object (not serializable); skip.
