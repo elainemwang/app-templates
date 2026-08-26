@@ -74,29 +74,34 @@ storage, tracing — is off by default and requires no setup.
 `POST /responses` (and its alias `POST /invocations`) take a JSON body with an `input` list — the
 same items the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) and
 the OpenAI Agents SDK use — plus an optional top-level `session_id` for multi-turn. The reply is
-`{ "output": [...], "session_id": "..." }`. Replace `<base_url>` with `http://localhost:8000`
-locally, or `https://<app>.databricksapps.com` (with an `Authorization: Bearer <token>` header) when
-deployed.
+`{ "output": [...], "session_id": "..." }`. The examples below use `http://localhost:8000` (local);
+when deployed, use `https://<app>.databricksapps.com` with an `Authorization: Bearer <token>` header.
 
 **Non-streaming:**
 
 ```bash
-curl -X POST <base_url>/responses \
+curl -sX POST http://localhost:8000/responses \
   -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "hi" }] }'
 ```
 
-**Streaming** (add `"stream": true`) returns an SSE stream ending with `data: [DONE]`.
+**Streaming** (add `"stream": true`) returns an SSE stream ending with `data: [DONE]`:
+
+```bash
+curl -NsX POST http://localhost:8000/responses \
+  -H "Content-Type: application/json" \
+  -d '{ "input": [{ "role": "user", "content": "hi" }], "stream": true }'
+```
 
 **Background** (add `"background": true`) returns a `resp_...` id immediately; poll it:
 
 ```bash
 # returns: { "id": "resp_...", "status": "in_progress" }
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+curl -sX POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "do something" }], "background": true }'
 
 # poll until status is "completed"
-curl <base_url>/responses/resp_...
+curl -s http://localhost:8000/responses/resp_...
 ```
 
 > Background mode here is **in-memory and single-process** — a teaching stand-in. Runs are not
@@ -108,11 +113,11 @@ curl <base_url>/responses/resp_...
 
 ```bash
 # First turn returns: { "output": [...], "session_id": "..." }
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+curl -sX POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "My name is Alice" }] }'
 
-# Second turn — agent remembers the first
-curl -X POST <base_url>/responses -H "Content-Type: application/json" \
+# Second turn — agent remembers the first (send only the new message)
+curl -sX POST http://localhost:8000/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "What is my name?" }],
         "session_id": "<session-id>" }'
 ```
