@@ -92,12 +92,12 @@ curl -X POST <base_url>/responses \
 **Background** (add `"background": true`) returns a `resp_...` id immediately; poll it:
 
 ```bash
-# returns: { "id": "resp_...", "status": "in_progress" }
+# returns: { "id": "resp_1a2b3c4d5e6f7g8h9i0j1k2l", "status": "in_progress" }
 curl -X POST <base_url>/responses -H "Content-Type: application/json" \
   -d '{ "input": [{ "role": "user", "content": "do something" }], "background": true }'
 
-# poll until status is "completed"
-curl <base_url>/responses/resp_...
+# poll with the returned id until status is "completed"
+curl <base_url>/responses/resp_1a2b3c4d5e6f7g8h9i0j1k2l
 ```
 
 > Background mode here is **in-memory and single-process** — a teaching stand-in. Runs are not
