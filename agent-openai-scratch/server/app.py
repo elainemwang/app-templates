@@ -38,6 +38,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 _STREAM_KEY = "stream"
 _BACKGROUND_KEY = "background"
 _MESSAGE_FORMAT_ATTR = "mlflow.message.format"
+_TRACE_NAME_TAG = "mlflow.traceName"
 
 InvokeHandler = Callable[[dict], Awaitable[dict]]
 StreamHandler = Callable[[dict], AsyncGenerator[dict, None]]
@@ -75,6 +76,7 @@ def build_app(invoke_handler: InvokeHandler, stream_handler: StreamHandler) -> F
 
     async def _invoke(request: dict) -> dict:
         with mlflow.start_span(name="invoke_handler") as span:
+            mlflow.update_current_trace(tags={_TRACE_NAME_TAG: "invoke_handler"})
             span.set_inputs(request)
             result = await invoke_handler(request)
             span.set_attribute(_MESSAGE_FORMAT_ATTR, "openai")
@@ -83,6 +85,7 @@ def build_app(invoke_handler: InvokeHandler, stream_handler: StreamHandler) -> F
 
     async def _stream(request: dict) -> AsyncGenerator[str, None]:
         with mlflow.start_span(name="stream_handler") as span:
+            mlflow.update_current_trace(tags={_TRACE_NAME_TAG: "stream_handler"})
             span.set_inputs(request)
             chunks: list[dict] = []
             try:
