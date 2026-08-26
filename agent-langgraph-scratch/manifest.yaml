@@ -1,9 +1,0 @@
-version: 1
-name: "Agent - LangGraph (FastAPI)"
-description: "A LangGraph agent served from a from-scratch FastAPI app. Runs locally with no database, exposes the Responses API, and optionally logs MLflow traces when configured."
-
-resource_specs:
-  - name: "experiment"
-    description: "Optional. The destination experiment for MLflow traces from the agent's execution."
-    experiment_spec:
-      permission: "CAN_EDIT"
